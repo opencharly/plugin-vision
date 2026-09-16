@@ -6,7 +6,7 @@
 # fix — the candy is scanned, the CUE schema gate applies, and the stock
 # `charly box validate` step works with no workflow change. (See
 # opencharly/charly#459.)
-version: 2026.254.1200
+version: 2026.232.0520
 discover:
     - path: candy
       recursive: true
