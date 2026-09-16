@@ -1,0 +1,40 @@
+version: 2026.254.1200
+plugin-vision:
+    candy:
+        version: 2026.259.2300
+        description: |-
+            OUT-OF-TREE charly plugin serving the `vision` check verb — a standalone Go
+            module (go.mod + cmd/serve/main.go) that validates an IMAGE (a screenshot a
+            check just produced) by sending it DIRECTLY to an OpenAI-compatible vision
+            endpoint from charly, served OUT-OF-PROCESS over go-plugin gRPC via the
+            charly plugin SDK (github.com/opencharly/sdk). charly's loader fetches this
+            candy's repo, go-builds the provider binary on the HOST, and serves it via
+            LocalTransport — so the image assertion lives HERE, out of charly's core
+            check surface.
+            An authored `vision:` step reads the SAME `artifact` path the recording /
+            screenshot verbs already write (wl:/vnc:/cdp:/spice: screenshot), base64
+            -encodes it as an OpenAI image_url data URL (ollama's OpenAI layer accepts
+            base64 data URLs ONLY — remote image URLs are unsupported), asks the model
+            the authored prompt, and asserts the reply with the shared matcher pipeline
+            (the reply IS the verb's stdout) plus an optional `expect:` form
+            (contains / matches / not_contains). The endpoint config reuses the shared
+            #LLMSpec/#LLMParams vocabulary (env EVAL_LLM_* > the step's llm: block > the
+            built-in local-ollama default), and the client is the SDK's shared llmkit —
+            the SAME client the pipeline engine's agent stages use, so both speak the
+            endpoint identically (idle bound, no env bleed, reasoning capture, vision
+            content parts). Every vision-exclusive modifier lives in the plugin's OWN
+            #VisionInput (schema/vision.cue @go), which the host splices onto the base
+            and validates each authored step against.
+        plugin:
+            source: github.com/opencharly/plugin-vision/candy/plugin-vision
+            providers:
+                - verb:vision
+        plan:
+            - check: the vision module ships (go.mod + the provider + the generated params + the served schema)
+              id: plugin-vision-module-present
+              context: [build]
+              command: "test -f go.mod && test -f provider.go && test -f params/cue_types_gen.go && test -f schema/vision.cue"
+            - check: the vision provider registers verb:vision with the served #VisionInput schema (the plugin's own ADE gate)
+              id: plugin-vision-verb-registers
+              context: [build]
+              command: "grep -q 'Word: \"vision\"' plugin.go && grep -q '#VisionInput' plugin.go"
