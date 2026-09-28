@@ -1,7 +1,5 @@
-version: 2026.232.0520
 plugin-vision:
     candy:
-        version: 2026.259.2300
         description: |-
             OUT-OF-TREE charly plugin serving the `vision` check verb — a standalone Go
             module (go.mod + cmd/serve/main.go) that validates an IMAGE (a screenshot a
