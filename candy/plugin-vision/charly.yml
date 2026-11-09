@@ -15,14 +15,16 @@ plugin-vision:
             base64 data URLs ONLY — remote image URLs are unsupported), asks the model
             the authored prompt, and asserts the reply with the shared matcher pipeline
             (the reply IS the verb's stdout) plus an optional `expect:` form
-            (contains / matches / not_contains). The endpoint config reuses the shared
-            #LLMSpec/#LLMParams vocabulary (env EVAL_LLM_* > the step's llm: block > the
-            built-in local-ollama default), and the client is the SDK's shared llmkit —
-            the SAME client the pipeline engine's agent stages use, so both speak the
-            endpoint identically (idle bound, no env bleed, reasoning capture, vision
-            content parts). Every vision-exclusive modifier lives in the plugin's OWN
-            #VisionInput (schema/vision.cue @go), which the host splices onto the base
-            and validates each authored step against.
+            (contains / matches / not_contains). The endpoint config IMPORTS the shared
+            #LLMSpec/#LLMParams vocabulary from the contract module
+            (github.com/opencharly/spec/schema) rather than restating it, and the client
+            is the SDK's shared llmkit — the SAME client the pipeline engine's agent
+            stages use, so both speak the endpoint identically (idle bound, no env bleed,
+            reasoning capture, vision content parts). Resolution is field-wise
+            (env EVAL_LLM_* > the step's llm: block > the built-in local-ollama default).
+            Every vision-exclusive modifier lives in the plugin's OWN #VisionInput
+            (schema/vision.cue @go), which the host composes per unit and validates each
+            authored step against.
         plugin:
             source: github.com/opencharly/plugin-vision/candy/plugin-vision
             providers:

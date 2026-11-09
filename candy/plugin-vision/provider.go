@@ -117,42 +117,14 @@ func runVision(ctx context.Context, in *params.VisionInput, paths []string) (str
 // EVAL_LLM_* operator env. The vision step's own `params:` is a convenience
 // overlay onto llm.params (merged, not replaced).
 //
-// The plugin's OWN params types (params.LLMSpec/params.LLMParams, generated from
-// this plugin's served schema) are bridged to the CONTRACT types (spec.LLMSpec/
-// spec.LLMParams) the shared SDK client consumes. The two are generated from the
-// same CUE vocabulary — the mirror exists so this file compiles STANDALONE — so a
-// JSON round-trip is an exact, lossless bridge; toSpec returns the zero value on
-// the (impossible) mismatch rather than panicking.
+// Both fields are the CONTRACT's own types (spec.LLMSpec / spec.LLMParams), because
+// the served schema imports the contract's #LLMSpec / #LLMParams instead of
+// restating them: the wire the shared SDK client consumes and the wire the verb
+// decodes are ONE type, with no bridge between them.
 func resolveConfig(in *params.VisionInput) llmkit.Config {
-	cfg := llmkit.Default().Apply(toSpec(in.Llm))
+	cfg := llmkit.Default().Apply(in.Llm)
 	// The params overlay is always applied: MergeParams copies only SET fields, so
 	// a zero overlay is a no-op (an omitted `params:` changes nothing).
-	cfg = cfg.Apply(spec.LLMSpec{Params: toSpecParams(in.Params)})
+	cfg = cfg.Apply(spec.LLMSpec{Params: in.Params})
 	return cfg.FromEnv()
-}
-
-// toSpec bridges the plugin's generated #LLMSpec to the contract spec.LLMSpec.
-func toSpec(l params.LLMSpec) spec.LLMSpec {
-	b, err := json.Marshal(l)
-	if err != nil {
-		return spec.LLMSpec{}
-	}
-	var out spec.LLMSpec
-	if err := json.Unmarshal(b, &out); err != nil {
-		return spec.LLMSpec{}
-	}
-	return out
-}
-
-// toSpecParams bridges the plugin's generated #LLMParams to the contract type.
-func toSpecParams(p params.LLMParams) spec.LLMParams {
-	b, err := json.Marshal(p)
-	if err != nil {
-		return spec.LLMParams{}
-	}
-	var out spec.LLMParams
-	if err := json.Unmarshal(b, &out); err != nil {
-		return spec.LLMParams{}
-	}
-	return out
 }

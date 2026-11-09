@@ -1,19 +1,36 @@
-// SELF-CONTAINED input schema for the `vision:` check verb — validate an image
-// (a screenshot the check itself produced) by sending it DIRECTLY to an
-// OpenAI-compatible vision endpoint from charly.
+// The `vision:` check verb's OWN CUE schema — validate an image (a screenshot the
+// check itself produced) by sending it DIRECTLY to an OpenAI-compatible vision
+// endpoint from charly.
 //
 // The #VisionInput def is a mirror of what the plugin's Go params decode; it is
-// the SINGLE SOURCE for this plugin's params (cue exp gengotypes → params/
-// cue_types_gen.go) AND the runtime validation contract the host splices onto the
-// base and unifies every authored `vision:` step against.
+// the SINGLE SOURCE for this plugin's params (spec/schemaparams.Generate, reached
+// from a shell as `charly candy params plugin-vision` → params/cue_types_gen.go)
+// AND the runtime validation contract the host composes per unit
+// (spec/schemacompose.ServedText) and unifies every authored `vision:` step
+// against.
 //
-// The LLM blocks (#LLMSpec/#LLMParams and their companions) are duplicated here
-// from spec/schema/llm.cue. That duplication is SANCTIONED, not an R3 violation —
-// the identical precedent is plugin-desktop-kind's schema/desktop.cue vs spec's
-// #Theme/#Session (and plugin-distro's #DistroInput): this file must compile
-// STANDALONE (the SDK compiles it serve-side and cue exp gengotypes reads it),
-// while spec's defs must generate Go. Neither can be the other. A parity test
-// (schema_parity_test.go) makes the next drift fail HERE, next to the fix.
+// ONE NAME, ONE HOME. The shared LLM vocabulary — #LLMSpec, #LLMParams and their
+// four companions (#LLMResponseFormat, #LLMReasoning, #LLMStreamOptions,
+// #LLMNamedToolChoice) — is the CONTRACT module's
+// (`github.com/opencharly/spec/schema`): it is the vocabulary BOTH this verb and
+// the pipeline engine's agent stages author against, and it is the def that
+// generates the Go types (spec.LLMSpec / spec.LLMParams) the shared SDK `llmkit`
+// client consumes. This schema IMPORTS it; the structurally identical local copies
+// it used to carry are DELETED, and the parity test that existed only to keep the
+// copy honest retires with them (R2 — one name, one home).
+//
+// #VisionInput and #VisionExpect are this plugin's OWN authoring shapes and stay
+// here: #VisionInput is the def the plugin advertises as its InputDef and the only
+// def the host's input validator is keyed on.
+//
+// THE IMPORT RESOLVES OFFLINE. It is the shape spec/schemacompose exists for: the
+// contract module is served from the spec Go module the binary already links — no
+// network, no module cache, no `cue.mod`, no published CUE module — on the serve
+// side (BuildCapabilities → ServedSchema) AND on the host side, which composes the
+// SAME body under the DERIVED module declaration (the wire carries no module
+// declaration, so both sides evaluate under one they can derive).
+
+import "github.com/opencharly/spec/schema"
 
 // #VisionInput is the `vision:` verb's plugin_input.
 //
@@ -36,14 +53,14 @@
 	images?: [...string]
 	// mime: the data-URL mime type for the images. Default "image/png".
 	mime?: *"image/png" | "image/jpeg" | "image/webp" | "image/gif"
-	// llm: the endpoint + request config (see #LLMSpec). Resolution is
+	// llm: the endpoint + request config (the contract's #LLMSpec). Resolution is
 	// field-wise: env (EVAL_LLM_*) > this block > the built-in local-ollama
 	// default, so a check needs no authored block to run.
-	llm?: #LLMSpec
-	// params: a convenience overlay of #LLMParams onto llm.params (the vision
-	// step's own request knobs, e.g. max_tokens/reasoning_effort). Merged
-	// field-wise over llm.params.
-	params?: #LLMParams
+	llm?: schema.#LLMSpec @go(Llm)
+	// params: a convenience overlay of the contract's #LLMParams onto llm.params
+	// (the vision step's own request knobs, e.g. max_tokens/reasoning_effort).
+	// Merged field-wise over llm.params.
+	params?: schema.#LLMParams @go(Params)
 	// expect: an optional reply assertion. The model's text reply is matched with
 	// the shared matcher semantics (contains/matches/regex), so a check can assert
 	// "the screenshot shows the new layout" without a json_schema round-trip.
@@ -61,63 +78,3 @@
 	// not_contains: the reply must NOT contain this substring (case-insensitive).
 	not_contains?: string
 }
-
-// ── the shared LLM vocabulary (mirror of spec/schema/llm.cue) ────────────────
-
-#LLMSpec: close({
-	base_url?:     string
-	model?:        string
-	api_key?:      string
-	organization?: string
-	project?:      string
-	timeout?:      string
-	idle_timeout?: string
-	max_retries?:  int & >=0 @go(Max_retries,optional=nillable)
-	headers?:      {[string]: string}
-	params?:       #LLMParams
-})
-
-#LLMParams: close({
-	temperature?:           number & >=0 & <=2 @go(Temperature,type=*float64)
-	top_p?:                 number & >=0 & <=1 @go(Top_p,type=*float64)
-	max_tokens?:            int & >0 @go(Max_tokens,optional=nillable)
-	max_completion_tokens?: int & >0 @go(Max_completion_tokens,optional=nillable)
-	frequency_penalty?:     number & >=-2 & <=2 @go(Frequency_penalty,type=*float64)
-	presence_penalty?:      number & >=-2 & <=2 @go(Presence_penalty,type=*float64)
-	seed?:                  int @go(Seed,optional=nillable)
-	stop?:                  string | [...string]
-	response_format?:       #LLMResponseFormat
-	reasoning_effort?:      "high" | "medium" | "low" | "none" @go(Reasoning_effort,type=string)
-	reasoning?:             #LLMReasoning
-	stream_options?:        #LLMStreamOptions
-	parallel_tool_calls?:   bool @go(Parallel_tool_calls,optional=nillable)
-	tool_choice?:           "none" | "auto" | "required" | #LLMNamedToolChoice
-	logprobs?:              bool @go(Logprobs,optional=nillable)
-	top_logprobs?:          int @go(Top_logprobs,optional=nillable)
-	user?:                  string
-	metadata?:              {[string]: string}
-	logit_bias?:            {[string]: int}
-	extra?:                 {[string]: _}
-})
-
-#LLMResponseFormat: close({
-	type: "text" | "json_object" | "json_schema" @go(Type,type=string)
-	json_schema?: close({
-		name:         string
-		description?: string
-		schema:       {[string]: _}
-		strict?:      bool
-	})
-})
-
-#LLMReasoning: close({
-	effort?: "high" | "medium" | "low" | "none" @go(Effort,type=string)
-})
-
-#LLMStreamOptions: close({
-	include_usage?: bool @go(Include_usage,optional=nillable)
-})
-
-#LLMNamedToolChoice: close({
-	function: close({name: string})
-})

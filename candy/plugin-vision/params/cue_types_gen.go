@@ -2,6 +2,10 @@
 
 package params
 
+import (
+	"github.com/opencharly/spec/spec"
+)
+
 // #VisionInput is the `vision:` verb's plugin_input.
 //
 // The verb asserts something about an IMAGE by asking a vision model. The image
@@ -27,15 +31,15 @@ type VisionInput struct {
 	// mime: the data-URL mime type for the images. Default "image/png".
 	Mime string `yaml:"mime,omitempty" json:"mime,omitempty"`
 
-	// llm: the endpoint + request config (see #LLMSpec). Resolution is
+	// llm: the endpoint + request config (the contract's #LLMSpec). Resolution is
 	// field-wise: env (EVAL_LLM_*) > this block > the built-in local-ollama
 	// default, so a check needs no authored block to run.
-	Llm LLMSpec `yaml:"llm,omitempty" json:"llm,omitempty"`
+	Llm spec.LLMSpec `yaml:"llm,omitempty" json:"llm,omitempty"`
 
-	// params: a convenience overlay of #LLMParams onto llm.params (the vision
-	// step's own request knobs, e.g. max_tokens/reasoning_effort). Merged
-	// field-wise over llm.params.
-	Params LLMParams `yaml:"params,omitempty" json:"params,omitempty"`
+	// params: a convenience overlay of the contract's #LLMParams onto llm.params
+	// (the vision step's own request knobs, e.g. max_tokens/reasoning_effort).
+	// Merged field-wise over llm.params.
+	Params spec.LLMParams `yaml:"params,omitempty" json:"params,omitempty"`
 
 	// expect: an optional reply assertion. The model's text reply is matched with
 	// the shared matcher semantics (contains/matches/regex), so a check can assert
@@ -43,92 +47,6 @@ type VisionInput struct {
 	// The step's stdout: matchers are applied to the reply too — this is the
 	// vision-specific convenience form.
 	Expect VisionExpect `yaml:"expect,omitempty" json:"expect,omitempty"`
-}
-
-type LLMSpec struct {
-	Base_url string `yaml:"base_url,omitempty" json:"base_url,omitempty"`
-
-	Model string `yaml:"model,omitempty" json:"model,omitempty"`
-
-	Api_key string `yaml:"api_key,omitempty" json:"api_key,omitempty"`
-
-	Organization string `yaml:"organization,omitempty" json:"organization,omitempty"`
-
-	Project string `yaml:"project,omitempty" json:"project,omitempty"`
-
-	Timeout string `yaml:"timeout,omitempty" json:"timeout,omitempty"`
-
-	Idle_timeout string `yaml:"idle_timeout,omitempty" json:"idle_timeout,omitempty"`
-
-	Max_retries *int64 `yaml:"max_retries,omitempty" json:"max_retries,omitempty"`
-
-	Headers map[string]string `yaml:"headers,omitempty" json:"headers,omitempty"`
-
-	Params LLMParams `yaml:"params,omitempty" json:"params,omitempty"`
-}
-
-type LLMParams struct {
-	Temperature *float64 `yaml:"temperature,omitempty" json:"temperature,omitempty"`
-
-	Top_p *float64 `yaml:"top_p,omitempty" json:"top_p,omitempty"`
-
-	Max_tokens *int64 `yaml:"max_tokens,omitempty" json:"max_tokens,omitempty"`
-
-	Max_completion_tokens *int64 `yaml:"max_completion_tokens,omitempty" json:"max_completion_tokens,omitempty"`
-
-	Frequency_penalty *float64 `yaml:"frequency_penalty,omitempty" json:"frequency_penalty,omitempty"`
-
-	Presence_penalty *float64 `yaml:"presence_penalty,omitempty" json:"presence_penalty,omitempty"`
-
-	Seed *int64 `yaml:"seed,omitempty" json:"seed,omitempty"`
-
-	Stop any/* CUE disjunction: (string|list) */ `yaml:"stop,omitempty" json:"stop,omitempty"`
-
-	Response_format LLMResponseFormat `yaml:"response_format,omitempty" json:"response_format,omitempty"`
-
-	Reasoning_effort string `yaml:"reasoning_effort,omitempty" json:"reasoning_effort,omitempty"`
-
-	Reasoning LLMReasoning `yaml:"reasoning,omitempty" json:"reasoning,omitempty"`
-
-	Stream_options LLMStreamOptions `yaml:"stream_options,omitempty" json:"stream_options,omitempty"`
-
-	Parallel_tool_calls *bool `yaml:"parallel_tool_calls,omitempty" json:"parallel_tool_calls,omitempty"`
-
-	Tool_choice any/* CUE disjunction: (string|struct) */ `yaml:"tool_choice,omitempty" json:"tool_choice,omitempty"`
-
-	Logprobs *bool `yaml:"logprobs,omitempty" json:"logprobs,omitempty"`
-
-	Top_logprobs *int64 `yaml:"top_logprobs,omitempty" json:"top_logprobs,omitempty"`
-
-	User string `yaml:"user,omitempty" json:"user,omitempty"`
-
-	Metadata map[string]string `yaml:"metadata,omitempty" json:"metadata,omitempty"`
-
-	Logit_bias map[string]int64 `yaml:"logit_bias,omitempty" json:"logit_bias,omitempty"`
-
-	Extra map[string]any/* CUE top */ `yaml:"extra,omitempty" json:"extra,omitempty"`
-}
-
-type LLMResponseFormat struct {
-	Type string `yaml:"type,omitempty" json:"type"`
-
-	Json_schema struct {
-		Name string `yaml:"name,omitempty" json:"name"`
-
-		Description string `yaml:"description,omitempty" json:"description,omitempty"`
-
-		Schema map[string]any/* CUE top */ `yaml:"schema,omitempty" json:"schema"`
-
-		Strict bool `yaml:"strict,omitempty" json:"strict,omitempty"`
-	} `yaml:"json_schema,omitempty" json:"json_schema,omitempty"`
-}
-
-type LLMReasoning struct {
-	Effort string `yaml:"effort,omitempty" json:"effort,omitempty"`
-}
-
-type LLMStreamOptions struct {
-	Include_usage *bool `yaml:"include_usage,omitempty" json:"include_usage,omitempty"`
 }
 
 // #VisionExpect — the reply assertion. Every declared field must hold (AND).
@@ -141,10 +59,4 @@ type VisionExpect struct {
 
 	// not_contains: the reply must NOT contain this substring (case-insensitive).
 	Not_contains string `yaml:"not_contains,omitempty" json:"not_contains,omitempty"`
-}
-
-type LLMNamedToolChoice struct {
-	Function struct {
-		Name string `yaml:"name,omitempty" json:"name"`
-	} `yaml:"function,omitempty" json:"function"`
 }
