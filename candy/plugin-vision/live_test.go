@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/opencharly/plugin-vision/candy/plugin-vision/params"
+	"github.com/opencharly/spec/spec"
 )
 
 // live_test.go — the R10 live proof for the verb. It drives the REAL provider
@@ -29,7 +30,7 @@ func TestLive_VisionAssertionAgainstRealEndpoint(t *testing.T) {
 		Prompt:   "Reply with ONLY the dominant color word, nothing else.",
 		Artifact: img,
 		Expect:   params.VisionExpect{Contains: "green"},
-		Params: params.LLMParams{
+		Params: spec.LLMParams{
 			Max_tokens: int64ptr(2000),
 		},
 	}, nil)
@@ -52,7 +53,7 @@ func TestLive_WrongExpectationFails(t *testing.T) {
 		Prompt:   "Reply with ONLY the dominant color word, nothing else.",
 		Artifact: img,
 		Expect:   params.VisionExpect{Contains: "blue"},
-		Params: params.LLMParams{
+		Params: spec.LLMParams{
 			Max_tokens: int64ptr(2000),
 		},
 	}, nil)

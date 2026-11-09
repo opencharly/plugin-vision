@@ -35,11 +35,13 @@ func NewProvider() pb.ProviderServer {
 	return &provider{}
 }
 
-// NewMeta advertises verb:vision + the plugin's self-contained CUE schema. The
-// verb's entire authoring contract — the image source, the prompt, the endpoint
-// config and the reply assertion — lives in the served #VisionInput
-// (schema/vision.cue), which the host splices onto the base and validates every
-// authored `vision:` step against.
+// NewMeta advertises verb:vision + the plugin's served CUE schema. The verb's
+// entire authoring contract — the image source, the prompt, the endpoint config
+// and the reply assertion — lives in the served #VisionInput (schema/vision.cue),
+// which the host composes per unit and validates every authored `vision:` step
+// against. The schema imports the contract's #LLMSpec / #LLMParams instead of
+// restating them, so the endpoint block the author writes and the wire the shared
+// llmkit client consumes are ONE definition.
 func NewMeta() pb.PluginMetaServer {
 	return sdk.NewMeta("2026.259.2200",
 		[]sdk.ProvidedCapability{{Class: "verb", Word: "vision", InputDef: "#VisionInput"}},

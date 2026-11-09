@@ -55,7 +55,11 @@ client the pipeline engine's agent stages use.
 
 ```sh
 cd candy/plugin-vision
-go test ./...                     # unit + mock (hermetic)
-CHARLY_SPEC_SCHEMA=<spec>/schema/llm.cue go test ./...   # + the schema parity check
+go test ./...                     # unit + mock + the served-schema contract (hermetic)
 go test -run TestLive -v ./...    # live proof (needs an OpenAI-compatible endpoint)
 ```
+
+The served schema imports the shared `#LLMSpec`/`#LLMParams` vocabulary from
+`github.com/opencharly/spec/schema`, so the endpoint block documented above and the
+wire the SDK's `llmkit` client consumes are one definition — there is no local copy
+to drift from the contract.

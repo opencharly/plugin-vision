@@ -14,7 +14,8 @@ Canonical files:
 - `candy/plugin-vision/plugin.go`, `provider.go`, `methods.go` — the provider and
   the verb handler.
 - `candy/plugin-vision/schema/vision.cue` + `params/cue_types_gen.go` — the
-  plugin's own `#VisionInput` schema and generated types.
+  plugin's own `#VisionInput` schema (which IMPORTS the contract module's
+  `#LLMSpec`/`#LLMParams` rather than restating them) and the generated types.
 - `candy/plugin-vision/cmd/serve/main.go` — the out-of-process serve shim.
 - `.github/workflows/tag-on-merge.yml`.
 - `README.md` — user overview only; never agent guidance.
@@ -35,9 +36,10 @@ when one is authored, add it here.
 ## Build / validate / test
 
 - `cd candy/plugin-vision && go build ./...` — compile the plugin module.
-- `cd candy/plugin-vision && go test ./...` — the hermetic unit + mock tests.
-- `CHARLY_SPEC_SCHEMA=<spec>/schema/llm.cue go test ./...` — adds the schema
-  parity check.
+- `cd candy/plugin-vision && go test ./...` — the hermetic unit + mock tests,
+  including `schema_test.go`'s served-schema contract (the schema composes on the
+  serve side, travels over the wire, and judges the authored-document fixture
+  identically on both).
 - `go test -run TestLive -v ./...` — live proof (needs an OpenAI-compatible
   endpoint; skips cleanly without one).
 - The merge gate is the **org-wide** `charly/pr-validator` (required check
@@ -48,9 +50,11 @@ when one is authored, add it here.
 
 - Edit the `plugin-vision:` candy entity, the Go source, and `schema/vision.cue`
   **together** — the schema is the single source for the generated params.
-- The endpoint config reuses the shared `#LLMSpec`/`#LLMParams` vocabulary and
-  the SDK's shared `llmkit` client; keep resolution field-wise (`EVAL_LLM_*` >
-  the step's `llm:` block > the built-in local-ollama default).
+- The endpoint config IMPORTS the contract's `#LLMSpec`/`#LLMParams`
+  (`github.com/opencharly/spec/schema`) rather than restating them, and drives
+  the SDK's shared `llmkit` client off those same types; keep resolution
+  field-wise (`EVAL_LLM_*` > the step's `llm:` block > the built-in local-ollama
+  default).
 - The image is sent as a base64 data URL (ollama's OpenAI layer accepts base64
   data URLs only — remote image URLs are unsupported).
 
